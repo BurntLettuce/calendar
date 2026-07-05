@@ -925,10 +925,10 @@
   </div>
 </div>
 
-<!-- Blocks the calendar behind while either panel is open, and closing it dismisses both -->
+<!-- Shared backdrop: blocks the calendar behind while either panel is open, and closing it dismisses both -->
 <div class="day-view-backdrop" id="dayViewBackdrop"></div>
 
-<!-- Flips in from the left edge, showing events by time -->
+<!-- Timeline panel: flips in from the left edge, showing the day's events by time -->
 <div class="timeline-overlay" id="timelineOverlay">
   <div class="timeline-panel" id="timelinePanel" role="dialog" aria-label="Day timeline">
     <div class="timeline-head">
@@ -1054,7 +1054,7 @@
   };
 </script>
 
-<script>
+<script type="module">
 (function(){
   const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
   const WEEKDAYS = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
@@ -1138,7 +1138,7 @@
     return lastDate.getDate() - ((lastDow - weekday + 7) % 7);
   }
 
-  // US federal holidays, by observed rule (month is 0-indexed)
+  // the 11 US federal holidays, by observed rule (month is 0-indexed)
   // returns { name, note } for a holiday date, or null
   function getHolidayInfo(y, m, d){
     if(m===0 && d===1) return { name:"New Year's Day", note:"The old year is closed and sealed; a fresh page opens." };
