@@ -154,6 +154,53 @@
     padding:48px 24px 80px;
   }
 
+  /* ---- sign-in widget (top-right; only the owner authenticates here) ---- */
+  .auth-widget{
+    position:fixed;
+    top:16px; right:16px;
+    z-index:80;
+  }
+  .auth-panel{
+    position:absolute;
+    top:100%; right:0;
+    margin-top:6px;
+    background:var(--ledger-2);
+    border:1px solid var(--brass);
+    border-radius:3px;
+    padding:14px;
+    box-shadow:0 20px 40px -12px rgba(0,0,0,0.85);
+    display:none;
+    flex-direction:column;
+    gap:8px;
+    width:210px;
+  }
+  .auth-panel.open{ display:flex; }
+  .auth-panel label{
+    font-family:var(--font-struct);
+    font-size:.58rem;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--ash);
+  }
+  .auth-panel input{
+    background:var(--void-2);
+    border:1px solid var(--brass-dim);
+    color:var(--bone);
+    font-family:var(--font-body);
+    font-size:.85rem;
+    padding:7px 8px;
+    border-radius:2px;
+    width:100%;
+  }
+  .auth-panel input:focus{ outline:none; border-color:var(--brass); }
+  .auth-error{
+    font-family:var(--font-body);
+    font-size:.75rem;
+    color:var(--blood-bright);
+    margin:0;
+    min-height:1em;
+  }
+
   /* ---- header ---- */
   .ledger-head{
     text-align:center;
@@ -831,6 +878,19 @@
 </head>
 <body>
 
+<!-- Sign-in -->
+<div class="auth-widget" id="authWidget">
+  <button class="today-btn" id="authBtn" type="button">Sign in</button>
+  <div class="auth-panel" id="authPanel">
+    <label for="authEmail">Email</label>
+    <input type="email" id="authEmail" autocomplete="username">
+    <label for="authPassword">Password</label>
+    <input type="password" id="authPassword" autocomplete="current-password">
+    <button type="button" class="add-btn" id="authSubmitBtn">Sign in</button>
+    <p class="auth-error" id="authError"></p>
+  </div>
+</div>
+
 <div class="stage">
   <div class="ledger-head">
     <svg class="sigil" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1011,15 +1071,12 @@
 
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
+  const auth = getAuth(app);
   const calendarRef = doc(db, "calendar", "main");
-
-  async function sha256(str){
-    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-  }
 
   window.__ghostDB = {
     subscribe(onData){
@@ -1032,25 +1089,27 @@
       });
     },
     async save(entriesObj){
-      let authHash = localStorage.getItem('ghost-ledger-auth');
-      if(!authHash){
-        const pass = prompt('Enter the ledger passphrase to save changes:');
-        if(pass === null) throw new Error('cancelled');
-        authHash = await sha256(pass);
+      if(!auth.currentUser){
+        alert('Sign in first to save changes.');
+        throw new Error('not signed in');
       }
       try{
-        await setDoc(calendarRef, { entries: entriesObj, _auth: authHash });
-        localStorage.setItem('ghost-ledger-auth', authHash);
+        await setDoc(calendarRef, { entries: entriesObj });
       }catch(err){
-        localStorage.removeItem('ghost-ledger-auth');
         if(err.code === 'permission-denied'){
-          alert('That passphrase was incorrect. Your change was not saved.');
+          alert('You are not authorized to save changes.');
         }else{
           alert('Could not save to the ledger. Check your connection and try again.');
         }
         throw err;
       }
     }
+  };
+
+  window.__ghostAuth = {
+    onChange(cb){ return onAuthStateChanged(auth, cb); },
+    async signIn(email, password){ await signInWithEmailAndPassword(auth, email, password); },
+    async signOut(){ await signOut(auth); }
   };
 </script>
 
@@ -1094,6 +1153,13 @@
   const startTimeInput = document.getElementById('startTimeInput');
   const endTimeInput = document.getElementById('endTimeInput');
   const noteInput = document.getElementById('noteInput');
+  const authBtn = document.getElementById('authBtn');
+  const authPanel = document.getElementById('authPanel');
+  const authEmail = document.getElementById('authEmail');
+  const authPassword = document.getElementById('authPassword');
+  const authSubmitBtn = document.getElementById('authSubmitBtn');
+  const authError = document.getElementById('authError');
+  let currentUser = null;
 
   function dateKey(y,m,d){ return y+'-'+m+'-'+d; }
   function todayKey(){ const t=new Date(); return dateKey(t.getFullYear(), t.getMonth(), t.getDate()); }
@@ -1247,8 +1313,7 @@
     document.body.appendChild(s);
   }
 
-  // start/stop only control whether NEW particles spawn — anything already
-  // falling keeps falling and removes itself naturally when its animation ends
+  // start/stop whether new particles spawn 
   function startLeaves(){
     if(leafTimer) return;
     for(let i=0;i<10;i++) setTimeout(spawnLeaf, Math.random()*3000);
@@ -1647,6 +1712,48 @@
     }
   });
   document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && pageJump.classList.contains('open')) closePageJump(); });
+
+  function closeAuthPanel(){ authPanel.classList.remove('open'); authError.textContent=''; }
+
+  authBtn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    if(currentUser){
+      window.__ghostAuth.signOut();
+    }else{
+      authPanel.classList.toggle('open');
+      if(authPanel.classList.contains('open')) authEmail.focus();
+    }
+  });
+
+  async function submitSignIn(){
+    authError.textContent = '';
+    const email = authEmail.value.trim();
+    const password = authPassword.value;
+    if(!email || !password) return;
+    try{
+      await window.__ghostAuth.signIn(email, password);
+      authEmail.value=''; authPassword.value='';
+      closeAuthPanel();
+    }catch(err){
+      authError.textContent = 'Sign-in failed. Check your email and password.';
+    }
+  }
+  authSubmitBtn.addEventListener('click', submitSignIn);
+  authPassword.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); submitSignIn(); } });
+  authEmail.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); submitSignIn(); } });
+
+  document.addEventListener('click', (e)=>{
+    if(authPanel.classList.contains('open') && !authPanel.contains(e.target) && e.target!==authBtn){
+      closeAuthPanel();
+    }
+  });
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && authPanel.classList.contains('open')) closeAuthPanel(); });
+
+  window.__ghostAuth.onChange((user)=>{
+    currentUser = user;
+    authBtn.textContent = user ? 'Sign out' : 'Sign in';
+    if(user) closeAuthPanel();
+  });
 
   spawnWisps();
   spawnSteam();
