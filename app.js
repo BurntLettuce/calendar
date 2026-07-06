@@ -101,7 +101,6 @@
     return null;
   }
 
-  // emotion rises the more events are bound to a single day — 0 events is calm (no mood), then escalates
   function moodForCount(count){
     if(count<=0) return null;
     return MOOD_LEVELS[Math.min(count,MOOD_LEVELS.length)-1];
@@ -206,8 +205,8 @@
     document.body.appendChild(s);
   }
 
-  // start/stop only control whether NEW particles spawn — anything already
-  // falling keeps falling and removes itself naturally when its animation ends
+  // start/stop only control whether new particles spawn — anything already
+  // falling keeps falling and removes itself when its animation ends
   function startLeaves(){
     if(leafTimer) return;
     for(let i=0;i<10;i++) setTimeout(spawnLeaf, Math.random()*3000);

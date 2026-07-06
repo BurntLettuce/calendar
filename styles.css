@@ -148,7 +148,7 @@
     padding:48px 24px 80px;
   }
 
-  /* ---- sign-in widget (top-right; only the owner authenticates here) ---- */
+  /* ---- sign-in widget ---- */
   .auth-widget{
     position:fixed;
     top:16px; right:16px;
@@ -534,7 +534,7 @@
   }
   .overlay.open .book{ transform:perspective(1400px) rotateY(0deg); }
 
-  /* ---- shared backdrop: dims + blocks the calendar while any day-view panel is open ---- */
+  /* ---- shared backdrop ---- */
   .day-view-backdrop{
     position:fixed; inset:0;
     background:rgba(4,3,5,0.6);
@@ -546,7 +546,7 @@
   }
   .day-view-backdrop.open{ opacity:1; pointer-events:auto; }
 
-  /* ---- ledger drawer (display: appears in the upper-right area to show a day's events) ---- */
+  /* ---- day's events (top right) ---- */
   .drawer-overlay{
     position:fixed; inset:0;
     background:transparent;
@@ -762,7 +762,7 @@
   .add-btn:hover{ filter:brightness(1.15); }
   .add-btn:active{ transform:scale(.99); }
 
-  /* ---- timeline panel (display: flips in from the left edge, times only) ---- */
+  /* ---- timeline panel ---- */
   .timeline-overlay{
     position:fixed;
     top:0; left:0; bottom:0;
@@ -908,7 +908,8 @@
 
   @media (max-width:560px){
     html{ font-size:19.5px; }
-    .stage{ padding:28px 12px 60px; }
+    body{ display:flex; flex-direction:column; }
+    .stage{ flex:1; display:flex; flex-direction:column; justify-content:center; padding:28px 12px 60px; }
     .floral-banner{ max-width:420px; }
     .day{ min-height:58px; padding:4px; }
     .entry-preview{ display:none; }
