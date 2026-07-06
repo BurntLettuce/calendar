@@ -10,6 +10,7 @@
   view.setDate(1);
   let entries = {}; // { "YYYY-M-D": [ {id,title,time,note} ] }
   let selectedDateKey = null;
+  let editingId = null;
   let storageReady = false;
 
   const grid = document.getElementById('grid');
@@ -45,6 +46,8 @@
   const authPassword = document.getElementById('authPassword');
   const authSubmitBtn = document.getElementById('authSubmitBtn');
   const authError = document.getElementById('authError');
+  const bookModeLabel = document.getElementById('bookModeLabel');
+  const addSubmitBtn = document.getElementById('addSubmitBtn');
   let currentUser = null;
 
   function dateKey(y,m,d){ return y+'-'+m+'-'+d; }
@@ -361,13 +364,29 @@
   }
 
   function openAddForm(){
+    editingId = null;
     titleInput.value=''; startTimeInput.value=''; endTimeInput.value=''; noteInput.value='';
+    bookModeLabel.textContent = 'New event';
+    addSubmitBtn.textContent = 'Schedule';
+    bookOverlay.classList.add('open');
+    setTimeout(()=>titleInput.focus(), 300);
+  }
+
+  function openEditForm(entry){
+    editingId = entry.id;
+    titleInput.value = entry.title || '';
+    startTimeInput.value = entry.startTime || '';
+    endTimeInput.value = entry.endTime || '';
+    noteInput.value = entry.note || '';
+    bookModeLabel.textContent = 'Edit event';
+    addSubmitBtn.textContent = 'Save changes';
     bookOverlay.classList.add('open');
     setTimeout(()=>titleInput.focus(), 300);
   }
 
   function closeAddForm(){
     bookOverlay.classList.remove('open');
+    editingId = null;
     if(!anyDayViewOpen()) selectedDateKey = null;
   }
 
@@ -379,7 +398,7 @@
     timelineTrack.innerHTML = '';
     for(let h=0; h<24; h++){
       const row = document.createElement('div');
-      row.className = 'timeline-hour';
+      row.className = 'timeline-hour' + (h===12 ? ' noon' : '');
       row.style.top = (h*48)+'px';
       const label = document.createElement('div');
       label.className='hour-label';
@@ -428,6 +447,8 @@
       time.textContent = formatTimeRange(entry);
       block.appendChild(time);
 
+      block.addEventListener('click', ()=> openEditForm(entry));
+
       timelineTrack.appendChild(block);
     });
 
@@ -441,6 +462,7 @@
         const item = document.createElement('div');
         item.className='untimed-item';
         item.textContent = entry.title;
+        item.addEventListener('click', ()=> openEditForm(entry));
         timelineUntimed.appendChild(item);
       });
     }
@@ -532,8 +554,10 @@
       del.className='del-btn';
       del.setAttribute('aria-label','Remove entry');
       del.innerHTML = '&#10005;';
-      del.addEventListener('click', ()=> deleteEntry(entry.id));
+      del.addEventListener('click', (e)=>{ e.stopPropagation(); deleteEntry(entry.id); });
       card.appendChild(del);
+
+      card.addEventListener('click', ()=> openEditForm(entry));
 
       entriesList.appendChild(card);
     });
@@ -554,15 +578,26 @@
     const title = titleInput.value.trim();
     if(!title || !selectedDateKey) return;
 
-    const entry = {
-      id: Date.now()+'-'+Math.random().toString(36).slice(2,7),
+    const fields = {
       title,
       startTime: startTimeInput.value || '',
       endTime: endTimeInput.value || '',
       note: noteInput.value.trim()
     };
+
     if(!entries[selectedDateKey]) entries[selectedDateKey] = [];
-    entries[selectedDateKey].push(entry);
+
+    if(editingId){
+      const list = entries[selectedDateKey];
+      const idx = list.findIndex(e=>e.id===editingId);
+      if(idx !== -1) list[idx] = { ...list[idx], ...fields };
+    }else{
+      entries[selectedDateKey].push({
+        id: Date.now()+'-'+Math.random().toString(36).slice(2,7),
+        ...fields
+      });
+    }
+
     saveEntries();
     renderEntries();
     renderTimeline();

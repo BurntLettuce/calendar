@@ -154,12 +154,12 @@
   </div>
 </div>
 
-<!-- Open separately to write a new event -->
+<!-- Opens separately to write a new event, or edit an existing one -->
 <div class="overlay" id="bookOverlay">
   <div class="book" id="book">
     <div class="book-head">
       <div>
-        <div class="weekday-label">New event</div>
+        <div class="weekday-label" id="bookModeLabel">New event</div>
         <h3 id="bookDateLabel"></h3>
       </div>
       <button class="icon-btn" id="closeBookBtn" aria-label="Close">&#10005;</button>
@@ -182,7 +182,7 @@
       <div class="row">
         <textarea id="noteInput" placeholder="Notes (optional)" maxlength="200"></textarea>
       </div>
-      <button type="submit" class="add-btn">Schedule</button>
+      <button type="submit" class="add-btn" id="addSubmitBtn">Schedule</button>
     </form>
   </div>
 </div>

@@ -653,7 +653,12 @@
     justify-content:space-between;
     gap:10px;
     align-items:flex-start;
+    cursor:pointer;
+    transition:border-color .15s ease, background .15s ease;
   }
+  .entry-card:hover{ border-color:var(--brass); background:var(--ledger-2); }
+  .entry-card.holiday-card{ cursor:default; }
+  .entry-card.holiday-card:hover{ border-color:rgba(169,131,47,0.2); background:var(--void-2); }
   .entry-card.restless{ border-left-color:var(--restless); }
   .entry-card.anxious{ border-left-color:var(--anxious); }
   .entry-card.distressed{ border-left-color:var(--distressed); }
@@ -809,6 +814,7 @@
     overflow-y:auto;
     position:relative;
     padding-left:44px;
+    padding-top:10px;
   }
   .timeline-track-wrap::-webkit-scrollbar{ width:6px; }
   .timeline-track-wrap::-webkit-scrollbar-thumb{ background:var(--brass-dim); border-radius:4px; }
@@ -836,6 +842,13 @@
     letter-spacing:.05em;
     color:var(--ash);
   }
+  .timeline-hour.noon{
+    border-top-color:rgba(80,200,120,0.5);
+  }
+  .timeline-hour.noon .hour-label{
+    color:#50c878;
+    font-weight:600;
+  }
 
   .timeline-event{
     position:absolute;
@@ -846,7 +859,10 @@
     border-radius:2px;
     padding:3px 6px;
     overflow:hidden;
+    cursor:pointer;
+    transition:filter .15s ease;
   }
+  .timeline-event:hover{ filter:brightness(1.25); }
   .timeline-event .t-title{
     font-family:var(--font-struct);
     font-size:.68rem;
@@ -863,7 +879,9 @@
   .timeline-event.holiday-event{
     border-left-color:#e8c547;
     background:linear-gradient(90deg, rgba(232,197,71,0.22), rgba(232,197,71,0.08));
+    cursor:default;
   }
+  .timeline-event.holiday-event:hover{ filter:none; }
 
   .timeline-untimed{
     border-top:1px solid var(--brass-dim);
@@ -883,9 +901,13 @@
     font-size:.82rem;
     color:var(--bone-dim);
     margin-bottom:4px;
+    cursor:pointer;
+    transition:color .15s ease;
   }
+  .timeline-untimed .untimed-item:hover{ color:var(--bone); }
 
   @media (max-width:560px){
+    html{ font-size:19.5px; }
     .stage{ padding:28px 12px 60px; }
     .floral-banner{ max-width:420px; }
     .day{ min-height:58px; padding:4px; }
