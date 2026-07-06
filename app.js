@@ -39,6 +39,13 @@
   const startTimeInput = document.getElementById('startTimeInput');
   const endTimeInput = document.getElementById('endTimeInput');
   const noteInput = document.getElementById('noteInput');
+  const authBtn = document.getElementById('authBtn');
+  const authPanel = document.getElementById('authPanel');
+  const authEmail = document.getElementById('authEmail');
+  const authPassword = document.getElementById('authPassword');
+  const authSubmitBtn = document.getElementById('authSubmitBtn');
+  const authError = document.getElementById('authError');
+  let currentUser = null;
 
   function dateKey(y,m,d){ return y+'-'+m+'-'+d; }
   function todayKey(){ const t=new Date(); return dateKey(t.getFullYear(), t.getMonth(), t.getDate()); }
@@ -613,6 +620,48 @@
     }
   });
   document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && pageJump.classList.contains('open')) closePageJump(); });
+
+  function closeAuthPanel(){ authPanel.classList.remove('open'); authError.textContent=''; }
+
+  authBtn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    if(currentUser){
+      window.__ghostAuth.signOut();
+    }else{
+      authPanel.classList.toggle('open');
+      if(authPanel.classList.contains('open')) authEmail.focus();
+    }
+  });
+
+  async function submitSignIn(){
+    authError.textContent = '';
+    const email = authEmail.value.trim();
+    const password = authPassword.value;
+    if(!email || !password) return;
+    try{
+      await window.__ghostAuth.signIn(email, password);
+      authEmail.value=''; authPassword.value='';
+      closeAuthPanel();
+    }catch(err){
+      authError.textContent = 'Sign-in failed. Check your email and password.';
+    }
+  }
+  authSubmitBtn.addEventListener('click', submitSignIn);
+  authPassword.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); submitSignIn(); } });
+  authEmail.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); submitSignIn(); } });
+
+  document.addEventListener('click', (e)=>{
+    if(authPanel.classList.contains('open') && !authPanel.contains(e.target) && e.target!==authBtn){
+      closeAuthPanel();
+    }
+  });
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && authPanel.classList.contains('open')) closeAuthPanel(); });
+
+  window.__ghostAuth.onChange((user)=>{
+    currentUser = user;
+    authBtn.textContent = user ? 'Sign out' : 'Sign in';
+    if(user) closeAuthPanel();
+  });
 
   spawnWisps();
   spawnSteam();

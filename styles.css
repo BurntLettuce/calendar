@@ -148,6 +148,53 @@
     padding:48px 24px 80px;
   }
 
+  /* ---- sign-in widget (top-right; only the owner authenticates here) ---- */
+  .auth-widget{
+    position:fixed;
+    top:16px; right:16px;
+    z-index:80;
+  }
+  .auth-panel{
+    position:absolute;
+    top:100%; right:0;
+    margin-top:6px;
+    background:var(--ledger-2);
+    border:1px solid var(--brass);
+    border-radius:3px;
+    padding:14px;
+    box-shadow:0 20px 40px -12px rgba(0,0,0,0.85);
+    display:none;
+    flex-direction:column;
+    gap:8px;
+    width:210px;
+  }
+  .auth-panel.open{ display:flex; }
+  .auth-panel label{
+    font-family:var(--font-struct);
+    font-size:.58rem;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--ash);
+  }
+  .auth-panel input{
+    background:var(--void-2);
+    border:1px solid var(--brass-dim);
+    color:var(--bone);
+    font-family:var(--font-body);
+    font-size:.85rem;
+    padding:7px 8px;
+    border-radius:2px;
+    width:100%;
+  }
+  .auth-panel input:focus{ outline:none; border-color:var(--brass); }
+  .auth-error{
+    font-family:var(--font-body);
+    font-size:.75rem;
+    color:var(--blood-bright);
+    margin:0;
+    min-height:1em;
+  }
+
   /* ---- header ---- */
   .ledger-head{
     text-align:center;

@@ -10,15 +10,12 @@
 
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
+  const auth = getAuth(app);
   const calendarRef = doc(db, "calendar", "main");
-
-  async function sha256(str){
-    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-  }
 
   window.__ghostDB = {
     subscribe(onData){
@@ -31,23 +28,25 @@
       });
     },
     async save(entriesObj){
-      let authHash = localStorage.getItem('ghost-ledger-auth');
-      if(!authHash){
-        const pass = prompt('Enter the ledger passphrase to save changes:');
-        if(pass === null) throw new Error('cancelled');
-        authHash = await sha256(pass);
+      if(!auth.currentUser){
+        alert('Sign in first to save changes.');
+        throw new Error('not signed in');
       }
       try{
-        await setDoc(calendarRef, { entries: entriesObj, _auth: authHash });
-        localStorage.setItem('ghost-ledger-auth', authHash);
+        await setDoc(calendarRef, { entries: entriesObj });
       }catch(err){
-        localStorage.removeItem('ghost-ledger-auth');
         if(err.code === 'permission-denied'){
-          alert('That passphrase was incorrect. Your change was not saved.');
+          alert('You are not authorized to save changes.');
         }else{
           alert('Could not save to the ledger. Check your connection and try again.');
         }
         throw err;
       }
     }
+  };
+
+  window.__ghostAuth = {
+    onChange(cb){ return onAuthStateChanged(auth, cb); },
+    async signIn(email, password){ await signInWithEmailAndPassword(auth, email, password); },
+    async signOut(){ await signOut(auth); }
   };

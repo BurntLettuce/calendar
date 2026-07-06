@@ -9,6 +9,19 @@
 </head>
 <body>
 
+<!-- Sign-in widget: only the site owner can authenticate here to enable saving -->
+<div class="auth-widget" id="authWidget">
+  <button class="today-btn" id="authBtn" type="button">Sign in</button>
+  <div class="auth-panel" id="authPanel">
+    <label for="authEmail">Email</label>
+    <input type="email" id="authEmail" autocomplete="username">
+    <label for="authPassword">Password</label>
+    <input type="password" id="authPassword" autocomplete="current-password">
+    <button type="button" class="add-btn" id="authSubmitBtn">Sign in</button>
+    <p class="auth-error" id="authError"></p>
+  </div>
+</div>
+
 <div class="stage">
   <div class="ledger-head">
     <svg class="sigil" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
