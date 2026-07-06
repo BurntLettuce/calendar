@@ -487,11 +487,22 @@
   }
   .overlay.open .book{ transform:perspective(1400px) rotateY(0deg); }
 
-  /* ---- ledger drawer (display: appears in the upper-right area to show a day's events) ---- */
-  .drawer-overlay{
+  /* ---- shared backdrop: dims + blocks the calendar while any day-view panel is open ---- */
+  .day-view-backdrop{
     position:fixed; inset:0;
     background:rgba(4,3,5,0.6);
     backdrop-filter:blur(1px);
+    z-index:38;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .3s ease;
+  }
+  .day-view-backdrop.open{ opacity:1; pointer-events:auto; }
+
+  /* ---- ledger drawer (display: appears in the upper-right area to show a day's events) ---- */
+  .drawer-overlay{
+    position:fixed; inset:0;
+    background:transparent;
     display:flex;
     align-items:flex-start;
     justify-content:flex-end;
@@ -502,7 +513,7 @@
     pointer-events:none;
     transition:opacity .3s ease;
   }
-  .drawer-overlay.open{ opacity:1; pointer-events:auto; }
+  .drawer-overlay.open{ opacity:1; }
 
   .ledger-drawer{
     width:min(420px, 90vw);
@@ -518,6 +529,7 @@
     display:flex;
     flex-direction:column;
     overflow:hidden;
+    pointer-events:auto;
   }
   .drawer-overlay.open .ledger-drawer{ transform:translateX(0); opacity:1; }
 
@@ -688,6 +700,134 @@
   .add-btn:hover{ filter:brightness(1.15); }
   .add-btn:active{ transform:scale(.99); }
 
+  /* ---- timeline panel (display: flips in from the left edge, times only) ---- */
+  .timeline-overlay{
+    position:fixed;
+    top:0; left:0; bottom:0;
+    width:min(300px, 84vw);
+    background:transparent;
+    z-index:45;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .3s ease;
+  }
+  .timeline-overlay.open{ opacity:1; }
+
+  .timeline-panel{
+    width:100%;
+    height:100%;
+    background:linear-gradient(180deg, rgba(255,255,255,0.03), transparent 25%), var(--ledger-2);
+    border-right:1px solid var(--brass);
+    box-shadow:30px 0 70px -20px rgba(0,0,0,0.9), 0 0 0 1px rgba(0,0,0,.5);
+    padding:20px 18px 16px;
+    transform:perspective(1400px) rotateY(-100deg);
+    transform-origin:left center;
+    transition:transform .45s cubic-bezier(.22,.85,.24,1);
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    pointer-events:auto;
+  }
+  .timeline-overlay.open .timeline-panel{ transform:perspective(1400px) rotateY(0deg); }
+
+  .timeline-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    border-bottom:1px solid var(--brass-dim);
+    padding-bottom:12px;
+    margin-bottom:12px;
+  }
+  .timeline-head h3{
+    font-family:var(--font-struct);
+    text-transform:uppercase;
+    letter-spacing:.1em;
+    font-size:.95rem;
+    margin:0 0 3px;
+    color:var(--bone);
+  }
+
+  .timeline-track-wrap{
+    flex:1;
+    overflow-y:auto;
+    position:relative;
+    padding-left:44px;
+  }
+  .timeline-track-wrap::-webkit-scrollbar{ width:6px; }
+  .timeline-track-wrap::-webkit-scrollbar-thumb{ background:var(--brass-dim); border-radius:4px; }
+
+  .timeline-track{
+    position:relative;
+    height:1152px;
+    border-left:1px solid var(--brass-dim);
+  }
+
+  .timeline-hour{
+    position:absolute;
+    left:0; right:0;
+    height:48px;
+    border-top:1px solid rgba(169,131,47,0.12);
+  }
+  .timeline-hour .hour-label{
+    position:absolute;
+    left:-44px;
+    top:-7px;
+    width:38px;
+    text-align:right;
+    font-family:var(--font-struct);
+    font-size:.58rem;
+    letter-spacing:.05em;
+    color:var(--ash);
+  }
+
+  .timeline-event{
+    position:absolute;
+    left:8px; right:4px;
+    min-height:20px;
+    background:linear-gradient(90deg, rgba(140,28,43,0.28), rgba(140,28,43,0.12));
+    border-left:3px solid var(--blood-bright);
+    border-radius:2px;
+    padding:3px 6px;
+    overflow:hidden;
+  }
+  .timeline-event .t-title{
+    font-family:var(--font-struct);
+    font-size:.68rem;
+    color:var(--bone);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .timeline-event .t-time{
+    font-size:.58rem;
+    color:var(--brass);
+    letter-spacing:.03em;
+  }
+  .timeline-event.holiday-event{
+    border-left-color:#e8c547;
+    background:linear-gradient(90deg, rgba(232,197,71,0.22), rgba(232,197,71,0.08));
+  }
+
+  .timeline-untimed{
+    border-top:1px solid var(--brass-dim);
+    padding-top:10px;
+    margin-top:10px;
+  }
+  .timeline-untimed .untimed-title{
+    font-family:var(--font-struct);
+    font-size:.6rem;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--brass-dim);
+    margin-bottom:6px;
+  }
+  .timeline-untimed .untimed-item{
+    font-family:var(--font-body);
+    font-size:.82rem;
+    color:var(--bone-dim);
+    margin-bottom:4px;
+  }
+
   @media (max-width:560px){
     .stage{ padding:28px 12px 60px; }
     .floral-banner{ max-width:420px; }
@@ -704,5 +844,6 @@
     .snowflake{ animation:none; display:none; }
     .book{ transition:none; }
     .ledger-drawer{ transition:none; }
+    .timeline-panel{ transition:none; }
     .day, .nav-btn, .today-btn, .icon-btn{ transition:none; }
   }

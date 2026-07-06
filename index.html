@@ -103,6 +103,26 @@
   </div>
 </div>
 
+<!-- Shared backdrop: blocks the calendar behind while either panel is open, and closing it dismisses both -->
+<div class="day-view-backdrop" id="dayViewBackdrop"></div>
+
+<!-- Timeline panel: flips in from the left edge, showing the day's events by time -->
+<div class="timeline-overlay" id="timelineOverlay">
+  <div class="timeline-panel" id="timelinePanel" role="dialog" aria-label="Day timeline">
+    <div class="timeline-head">
+      <div>
+        <div class="weekday-label" id="timelineWeekday"></div>
+        <h3 id="timelineDate"></h3>
+      </div>
+      <button class="icon-btn" id="closeTimelineBtn" aria-label="Close">&#10005;</button>
+    </div>
+    <div class="timeline-track-wrap" id="timelineTrackWrap">
+      <div class="timeline-track" id="timelineTrack"></div>
+    </div>
+    <div class="timeline-untimed" id="timelineUntimed"></div>
+  </div>
+</div>
+
 <!-- Menu appears in the upper-right area of the screen to display events -->
 <div class="drawer-overlay" id="drawerOverlay">
   <div class="ledger-drawer" id="ledgerDrawer" role="dialog" aria-label="Day's events">

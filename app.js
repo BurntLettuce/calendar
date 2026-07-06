@@ -21,6 +21,13 @@
   const drawerOverlay = document.getElementById('drawerOverlay');
   const ledgerDrawer = document.getElementById('ledgerDrawer');
   const bookOverlay = document.getElementById('bookOverlay');
+  const dayViewBackdrop = document.getElementById('dayViewBackdrop');
+  const timelineOverlay = document.getElementById('timelineOverlay');
+  const timelineWeekday = document.getElementById('timelineWeekday');
+  const timelineDate = document.getElementById('timelineDate');
+  const timelineTrackWrap = document.getElementById('timelineTrackWrap');
+  const timelineTrack = document.getElementById('timelineTrack');
+  const timelineUntimed = document.getElementById('timelineUntimed');
   const entriesList = document.getElementById('entriesList');
   const panelDate = document.getElementById('panelDate');
   const panelWeekday = document.getElementById('panelWeekday');
@@ -34,6 +41,19 @@
 
   function dateKey(y,m,d){ return y+'-'+m+'-'+d; }
   function todayKey(){ const t=new Date(); return dateKey(t.getFullYear(), t.getMonth(), t.getDate()); }
+
+  function minutesFromTime(t){
+    if(!t) return null;
+    const [h,m] = t.split(':').map(Number);
+    return h*60+m;
+  }
+  function formatTime12(t){
+    if(!t) return '';
+    const [h,m] = t.split(':').map(Number);
+    const period = h>=12 ? 'PM' : 'AM';
+    let hh = h%12; if(hh===0) hh=12;
+    return hh+':'+String(m).padStart(2,'0')+' '+period;
+  }
 
   // nth weekday of a month (weekday: 0=Sun..6=Sat, n: 1st..5th occurrence)
   function nthWeekdayOfMonth(year, month, weekday, n){
@@ -93,7 +113,7 @@
       entries = liveEntries;
       storageReady = true;
       render();
-      if(selectedDateKey) renderEntries();
+      if(selectedDateKey){ renderEntries(); renderTimeline(); }
     });
   }
 
@@ -285,15 +305,45 @@
     panelWeekday.textContent = weekday;
     panelDate.textContent = dateText;
     bookDateLabel.textContent = weekday + ', ' + dateText;
+    timelineWeekday.textContent = weekday;
+    timelineDate.textContent = dateText;
 
     renderEntries();
+    renderTimeline();
 
     drawerOverlay.classList.add('open');
+    timelineOverlay.classList.add('open');
+    updateDayViewBackdrop();
+  }
+
+  function anyDayViewOpen(){
+    return bookOverlay.classList.contains('open') || drawerOverlay.classList.contains('open') || timelineOverlay.classList.contains('open');
+  }
+
+  // the shared backdrop stays up as long as the drawer or timeline is open,
+  // and it's what blocks interaction with the calendar underneath
+  function updateDayViewBackdrop(){
+    const shouldShow = drawerOverlay.classList.contains('open') || timelineOverlay.classList.contains('open');
+    dayViewBackdrop.classList.toggle('open', shouldShow);
   }
 
   function closeDrawer(){
     drawerOverlay.classList.remove('open');
-    if(!bookOverlay.classList.contains('open')) selectedDateKey = null;
+    updateDayViewBackdrop();
+    if(!anyDayViewOpen()) selectedDateKey = null;
+  }
+
+  function closeTimeline(){
+    timelineOverlay.classList.remove('open');
+    updateDayViewBackdrop();
+    if(!anyDayViewOpen()) selectedDateKey = null;
+  }
+
+  function closeAllDayViews(){
+    drawerOverlay.classList.remove('open');
+    timelineOverlay.classList.remove('open');
+    updateDayViewBackdrop();
+    if(!anyDayViewOpen()) selectedDateKey = null;
   }
 
   function openAddForm(){
@@ -304,6 +354,90 @@
 
   function closeAddForm(){
     bookOverlay.classList.remove('open');
+    if(!anyDayViewOpen()) selectedDateKey = null;
+  }
+
+  function renderTimeline(){
+    const list = entries[selectedDateKey] || [];
+    const [hy, hm, hd] = selectedDateKey.split('-').map(Number);
+    const holidayInfo = getHolidayInfo(hy, hm, hd);
+
+    timelineTrack.innerHTML = '';
+    for(let h=0; h<24; h++){
+      const row = document.createElement('div');
+      row.className = 'timeline-hour';
+      row.style.top = (h*48)+'px';
+      const label = document.createElement('div');
+      label.className='hour-label';
+      label.textContent = h===0 ? '12 AM' : h<12 ? h+' AM' : h===12 ? '12 PM' : (h-12)+' PM';
+      row.appendChild(label);
+      timelineTrack.appendChild(row);
+    }
+
+    if(holidayInfo){
+      const block = document.createElement('div');
+      block.className = 'timeline-event holiday-event';
+      block.style.top = '2px';
+      block.style.height = '40px';
+      const title = document.createElement('div'); title.className='t-title'; title.textContent = holidayInfo.name;
+      const time = document.createElement('div'); time.className='t-time'; time.textContent = 'Federal Holiday';
+      block.appendChild(title); block.appendChild(time);
+      timelineTrack.appendChild(block);
+    }
+
+    const untimed = [];
+    const timed = [];
+    list.forEach(entry=>{
+      if(minutesFromTime(entry.time)===null) untimed.push(entry);
+      else timed.push(entry);
+    });
+
+    timed.forEach(entry=>{
+      const startMin = minutesFromTime(entry.time);
+      const endMin = startMin + 30; // single time field — shown as a default 30-minute block
+      const top = (startMin/60)*48;
+      const height = Math.max(((endMin-startMin)/60)*48, 18);
+
+      const block = document.createElement('div');
+      block.className = 'timeline-event';
+      block.style.top = top+'px';
+      block.style.height = height+'px';
+
+      const title = document.createElement('div');
+      title.className='t-title';
+      title.textContent = entry.title;
+      block.appendChild(title);
+
+      const time = document.createElement('div');
+      time.className='t-time';
+      time.textContent = formatTime12(entry.time);
+      block.appendChild(time);
+
+      timelineTrack.appendChild(block);
+    });
+
+    timelineUntimed.innerHTML = '';
+    if(untimed.length){
+      const heading = document.createElement('div');
+      heading.className='untimed-title';
+      heading.textContent = 'Untimed';
+      timelineUntimed.appendChild(heading);
+      untimed.forEach(entry=>{
+        const item = document.createElement('div');
+        item.className='untimed-item';
+        item.textContent = entry.title;
+        timelineUntimed.appendChild(item);
+      });
+    }
+
+    requestAnimationFrame(()=>{
+      let scrollTarget = 7*48;
+      if(timed.length){
+        const earliest = Math.min(...timed.map(e=>minutesFromTime(e.time)));
+        scrollTarget = Math.max(0, (earliest/60)*48 - 48);
+      }
+      timelineTrackWrap.scrollTop = scrollTarget;
+    });
   }
 
   function renderEntries(){
@@ -396,6 +530,7 @@
     if(entries[selectedDateKey].length===0) delete entries[selectedDateKey];
     saveEntries();
     renderEntries();
+    renderTimeline();
     render();
   }
 
@@ -414,6 +549,7 @@
     entries[selectedDateKey].push(entry);
     saveEntries();
     renderEntries();
+    renderTimeline();
     render();
 
     closeAddForm();
@@ -422,13 +558,14 @@
   openAddBtn.addEventListener('click', openAddForm);
   document.getElementById('closeDrawerBtn').addEventListener('click', closeDrawer);
   document.getElementById('closeBookBtn').addEventListener('click', closeAddForm);
+  document.getElementById('closeTimelineBtn').addEventListener('click', closeTimeline);
 
-  drawerOverlay.addEventListener('click', (e)=>{ if(e.target===drawerOverlay) closeDrawer(); });
+  dayViewBackdrop.addEventListener('click', closeAllDayViews);
   bookOverlay.addEventListener('click', (e)=>{ if(e.target===bookOverlay) closeAddForm(); });
   document.addEventListener('keydown', (e)=>{
     if(e.key!=='Escape') return;
     if(bookOverlay.classList.contains('open')) closeAddForm();
-    else if(drawerOverlay.classList.contains('open')) closeDrawer();
+    else if(timelineOverlay.classList.contains('open') || drawerOverlay.classList.contains('open')) closeAllDayViews();
   });
 
   document.getElementById('prevBtn').addEventListener('click', ()=>{ view.setMonth(view.getMonth()-1); render(); });
