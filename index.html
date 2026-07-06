@@ -155,7 +155,16 @@
     <form class="add-entry" id="addForm">
       <div class="row">
         <input type="text" id="titleInput" placeholder="Enter Title" maxlength="60" required>
-        <input type="time" id="timeInput" style="max-width:120px;">
+      </div>
+      <div class="row time-row">
+        <div class="time-field">
+          <label for="startTimeInput">Start</label>
+          <input type="time" id="startTimeInput">
+        </div>
+        <div class="time-field">
+          <label for="endTimeInput">End</label>
+          <input type="time" id="endTimeInput">
+        </div>
       </div>
       <div class="row">
         <textarea id="noteInput" placeholder="Notes (optional)" maxlength="200"></textarea>

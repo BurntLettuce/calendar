@@ -36,7 +36,8 @@
   const openAddBtn = document.getElementById('openAddBtn');
   const addForm = document.getElementById('addForm');
   const titleInput = document.getElementById('titleInput');
-  const timeInput = document.getElementById('timeInput');
+  const startTimeInput = document.getElementById('startTimeInput');
+  const endTimeInput = document.getElementById('endTimeInput');
   const noteInput = document.getElementById('noteInput');
 
   function dateKey(y,m,d){ return y+'-'+m+'-'+d; }
@@ -53,6 +54,12 @@
     const period = h>=12 ? 'PM' : 'AM';
     let hh = h%12; if(hh===0) hh=12;
     return hh+':'+String(m).padStart(2,'0')+' '+period;
+  }
+  function formatTimeRange(entry){
+    if(entry.startTime && entry.endTime) return formatTime12(entry.startTime)+'\u2013'+formatTime12(entry.endTime);
+    if(entry.startTime) return formatTime12(entry.startTime);
+    if(entry.endTime) return 'Ends '+formatTime12(entry.endTime);
+    return '';
   }
 
   // nth weekday of a month (weekday: 0=Sun..6=Sat, n: 1st..5th occurrence)
@@ -347,7 +354,7 @@
   }
 
   function openAddForm(){
-    titleInput.value=''; timeInput.value=''; noteInput.value='';
+    titleInput.value=''; startTimeInput.value=''; endTimeInput.value=''; noteInput.value='';
     bookOverlay.classList.add('open');
     setTimeout(()=>titleInput.focus(), 300);
   }
@@ -388,13 +395,14 @@
     const untimed = [];
     const timed = [];
     list.forEach(entry=>{
-      if(minutesFromTime(entry.time)===null) untimed.push(entry);
+      if(minutesFromTime(entry.startTime)===null) untimed.push(entry);
       else timed.push(entry);
     });
 
     timed.forEach(entry=>{
-      const startMin = minutesFromTime(entry.time);
-      const endMin = startMin + 30; // single time field — shown as a default 30-minute block
+      const startMin = minutesFromTime(entry.startTime);
+      let endMin = minutesFromTime(entry.endTime);
+      if(endMin===null || endMin<=startMin) endMin = startMin+30; // no valid end time given — fall back to a 30-minute block
       const top = (startMin/60)*48;
       const height = Math.max(((endMin-startMin)/60)*48, 18);
 
@@ -410,7 +418,7 @@
 
       const time = document.createElement('div');
       time.className='t-time';
-      time.textContent = formatTime12(entry.time);
+      time.textContent = formatTimeRange(entry);
       block.appendChild(time);
 
       timelineTrack.appendChild(block);
@@ -433,7 +441,7 @@
     requestAnimationFrame(()=>{
       let scrollTarget = 7*48;
       if(timed.length){
-        const earliest = Math.min(...timed.map(e=>minutesFromTime(e.time)));
+        const earliest = Math.min(...timed.map(e=>minutesFromTime(e.startTime)));
         scrollTarget = Math.max(0, (earliest/60)*48 - 48);
       }
       timelineTrackWrap.scrollTop = scrollTarget;
@@ -485,7 +493,7 @@
       entriesList.appendChild(empty);
       return;
     }
-    const sorted = [...list].sort((a,b)=> (a.time||'99:99').localeCompare(b.time||'99:99'));
+    const sorted = [...list].sort((a,b)=> (a.startTime||'99:99').localeCompare(b.startTime||'99:99'));
     sorted.forEach((entry, idx)=>{
       const pageMood = MOOD_LEVELS[Math.min(idx+1, MOOD_LEVELS.length)-1];
 
@@ -502,7 +510,7 @@
 
       const meta = document.createElement('div');
       meta.className='time';
-      meta.innerHTML = '<span class="event-num">Event ' + toRoman(idx+1) + '</span>' + (entry.time ? '  ·  ' + entry.time : '');
+      meta.innerHTML = '<span class="event-num">Event ' + toRoman(idx+1) + '</span>' + (formatTimeRange(entry) ? '  ·  ' + formatTimeRange(entry) : '');
       main.appendChild(meta);
 
       if(entry.note){
@@ -542,7 +550,8 @@
     const entry = {
       id: Date.now()+'-'+Math.random().toString(36).slice(2,7),
       title,
-      time: timeInput.value || '',
+      startTime: startTimeInput.value || '',
+      endTime: endTimeInput.value || '',
       note: noteInput.value.trim()
     };
     if(!entries[selectedDateKey]) entries[selectedDateKey] = [];

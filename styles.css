@@ -683,6 +683,16 @@
   }
   form.add-entry textarea{ resize:vertical; min-height:46px; font-family:var(--font-body); }
 
+  .time-row{ gap:8px; }
+  .time-field{ flex:1; display:flex; flex-direction:column; gap:4px; }
+  .time-field label{
+    font-family:var(--font-struct);
+    font-size:.58rem;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--ash);
+  }
+
   .add-btn{
     width:100%;
     background:linear-gradient(180deg, var(--blood-bright), var(--blood));
