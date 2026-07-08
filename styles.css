@@ -247,7 +247,7 @@
     padding-bottom:14px;
     border-bottom:1px solid var(--brass-dim);
   }
-  .month-bar .month-id{ text-align:center; position:relative; }
+  .month-bar .month-id{ text-align:center; position:relative; transition:opacity .2s ease, transform .2s ease; }
   .page-label{
     font-family:var(--font-struct);
     font-size:.6rem;
@@ -398,7 +398,28 @@
     display:grid;
     grid-template-columns:repeat(7,1fr);
     gap:6px;
+    transition:opacity .2s ease, transform .2s ease;
   }
+
+  /* month-change animation: outgoing page fades/slides away, then the
+     freshly-rendered page fades/slides in from the opposite side */
+  .grid.month-anim-out,
+  .month-id.month-anim-out{
+    opacity:0;
+  }
+  .grid.month-anim-out.dir-next,
+  .month-id.month-anim-out.dir-next{ transform:translateX(-10px); }
+  .grid.month-anim-out.dir-prev,
+  .month-id.month-anim-out.dir-prev{ transform:translateX(10px); }
+
+  .grid.month-anim-in,
+  .month-id.month-anim-in{
+    opacity:0;
+  }
+  .grid.month-anim-in.dir-next,
+  .month-id.month-anim-in.dir-next{ transform:translateX(10px); }
+  .grid.month-anim-in.dir-prev,
+  .month-id.month-anim-in.dir-prev{ transform:translateX(-10px); }
 
   .day{
     position:relative;
@@ -926,4 +947,7 @@
     .ledger-drawer{ transition:none; }
     .timeline-panel{ transition:none; }
     .day, .nav-btn, .today-btn, .icon-btn{ transition:none; }
+    .grid, .month-id{ transition:none; }
+    .grid.month-anim-out, .month-id.month-anim-out,
+    .grid.month-anim-in, .month-id.month-anim-in{ opacity:1; transform:none; }
   }

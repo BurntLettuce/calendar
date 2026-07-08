@@ -15,6 +15,7 @@
 
   const grid = document.getElementById('grid');
   const monthLabel = document.getElementById('monthLabel');
+  const monthIdEl = document.querySelector('.month-id');
   const pageLabel = document.getElementById('pageLabel');
   const pageJump = document.getElementById('pageJump');
   const pageInput = document.getElementById('pageInput');
@@ -110,6 +111,41 @@
     return (y - PAGE_EPOCH_YEAR) * 12 + (m - PAGE_EPOCH_MONTH) + 1;
   }
 
+  // Fades/slides the days grid and the month/page. 
+  // Direction is inferred from whether the new
+  // page comes after or before the one currently on screen
+  const MONTH_ANIM_OUT_MS = 160;
+  let monthAnimToken = 0;
+  function animateMonthChange(direction){
+    if(!direction){ render(); return; }
+
+    const dirClass = 'dir-' + direction;
+    const myToken = ++monthAnimToken;
+
+    grid.classList.add('month-anim-out', dirClass);
+    monthIdEl.classList.add('month-anim-out', dirClass);
+
+    setTimeout(()=>{
+      if(myToken !== monthAnimToken) return;
+
+      render();
+
+      grid.classList.remove('month-anim-out', dirClass);
+      monthIdEl.classList.remove('month-anim-out', dirClass);
+      grid.classList.add('month-anim-in', dirClass);
+      monthIdEl.classList.add('month-anim-in', dirClass);
+
+      // force a reflow so the browser registers the "in" starting state
+      // before it clears, otherwise the transition won't animate
+      void grid.offsetWidth;
+
+      requestAnimationFrame(()=>{
+        grid.classList.remove('month-anim-in', dirClass);
+        monthIdEl.classList.remove('month-anim-in', dirClass);
+      });
+    }, MONTH_ANIM_OUT_MS);
+  }
+
   function dateForPage(pageNum){
     const totalMonths = pageNum - 1; // months offset from Jan 2026
     const year = PAGE_EPOCH_YEAR + Math.floor(totalMonths / 12);
@@ -136,7 +172,7 @@
   async function saveEntries(){
     try{
       await window.__ghostDB.save(entries);
-    }catch(e){ /* user was already alerted inside save() */ }
+    }catch(e){}
   }
 
   function spawnWisps(){
@@ -618,9 +654,21 @@
     else if(timelineOverlay.classList.contains('open') || drawerOverlay.classList.contains('open')) closeAllDayViews();
   });
 
-  document.getElementById('prevBtn').addEventListener('click', ()=>{ view.setMonth(view.getMonth()-1); render(); });
-  document.getElementById('nextBtn').addEventListener('click', ()=>{ view.setMonth(view.getMonth()+1); render(); });
-  document.getElementById('todayBtn').addEventListener('click', ()=>{ view = new Date(); view.setDate(1); render(); });
+  document.getElementById('prevBtn').addEventListener('click', ()=>{
+    view = new Date(view.getFullYear(), view.getMonth()-1, 1);
+    animateMonthChange('prev');
+  });
+  document.getElementById('nextBtn').addEventListener('click', ()=>{
+    view = new Date(view.getFullYear(), view.getMonth()+1, 1);
+    animateMonthChange('next');
+  });
+  document.getElementById('todayBtn').addEventListener('click', ()=>{
+    const oldPageNum = pageNumberFor(view.getFullYear(), view.getMonth());
+    const target = new Date(); target.setDate(1);
+    const newPageNum = pageNumberFor(target.getFullYear(), target.getMonth());
+    view = target;
+    animateMonthChange(newPageNum === oldPageNum ? null : (newPageNum > oldPageNum ? 'next' : 'prev'));
+  });
 
   function openPageJump(){
     pageJump.classList.add('open');
@@ -635,9 +683,10 @@
   function goToPage(){
     const n = parseInt(pageInput.value, 10);
     if(Number.isNaN(n)) return;
+    const oldPageNum = pageNumberFor(view.getFullYear(), view.getMonth());
     const { year, month } = dateForPage(n);
     view = new Date(year, month, 1);
-    render();
+    animateMonthChange(n === oldPageNum ? null : (n > oldPageNum ? 'next' : 'prev'));
     closePageJump();
   }
 
