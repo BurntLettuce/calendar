@@ -428,8 +428,9 @@
   function renderTimeline(){
     const list = entries[selectedDateKey] || [];
     const [hy, hmRaw, hd] = selectedDateKey.split('-').map(Number);
+    const hm = hmRaw - 1;
     const holidayInfo = getHolidayInfo(hy, hm, hd);
-
+	
     timelineTrack.innerHTML = '';
     for(let h=0; h<24; h++){
       const row = document.createElement('div');
@@ -515,6 +516,7 @@
   function renderEntries(){
     const list = entries[selectedDateKey] || [];
     const mood = moodForCount(list.length);
+    const [hy, hmRaw, hd] = selectedDateKey.split('-').map(Number);
     const hm = hmRaw - 1;
     const holidayInfo = getHolidayInfo(hy, hm, hd);
 
