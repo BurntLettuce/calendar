@@ -51,7 +51,7 @@
   const addSubmitBtn = document.getElementById('addSubmitBtn');
   let currentUser = null;
 
-  function dateKey(y,m,d){ return y+'-'+m+'-'+d; }
+  function dateKey(y,m,d){ return y+'-'+(m+1)+'-'+d; }
   function todayKey(){ const t=new Date(); return dateKey(t.getFullYear(), t.getMonth(), t.getDate()); }
 
   function minutesFromTime(t){
@@ -427,7 +427,7 @@
 
   function renderTimeline(){
     const list = entries[selectedDateKey] || [];
-    const [hy, hm, hd] = selectedDateKey.split('-').map(Number);
+    const [hy, hmRaw, hd] = selectedDateKey.split('-').map(Number);
     const holidayInfo = getHolidayInfo(hy, hm, hd);
 
     timelineTrack.innerHTML = '';
@@ -515,7 +515,7 @@
   function renderEntries(){
     const list = entries[selectedDateKey] || [];
     const mood = moodForCount(list.length);
-    const [hy, hm, hd] = selectedDateKey.split('-').map(Number);
+    const hm = hmRaw - 1;
     const holidayInfo = getHolidayInfo(hy, hm, hd);
 
     chapterTag.innerHTML = mood
