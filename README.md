@@ -51,6 +51,11 @@ generate its hash yourself and paste only the hash into Firestore.
    name it `secret`, document ID `key`, add a field named `hash` (type
    string) and paste the hex string as its value. Save.
 
-## 4. Publish through GitHub Pages
+## 4. Local test
+```
+npx serve
+```
+
+## 5. Publish through GitHub Pages
 
 1. Go to https://github.com/new, create new repo.

@@ -76,7 +76,6 @@
     100%{ transform:translateY(-120vh) translateX(40px); opacity:0; }
   }
 
-  /* rising steam, like off a hot cup left somewhere in the reading room */
   .steam{
     position:fixed;
     bottom:-10vh;
@@ -200,18 +199,14 @@
     text-align:center;
     margin-bottom:34px;
   }
-  .sigil{
-    width:40px; height:40px;
-    margin:0 auto 6px;
-    opacity:.8;
-  }
   .floral-banner{
     width:100%;
     max-width:640px;
     height:auto;
     margin:0 auto;
     display:block;
-    opacity:.92;
+    -webkit-mask-image:linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+    mask-image:linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
   }
 
   /* ---- the page ---- */
@@ -401,8 +396,7 @@
     transition:opacity .2s ease, transform .2s ease;
   }
 
-  /* month-change animation: outgoing page fades/slides away, then the
-     freshly-rendered page fades/slides in from the opposite side */
+  /* month-change animation */
   .grid.month-anim-out,
   .month-id.month-anim-out{
     opacity:0;
@@ -523,7 +517,7 @@
   .distressed{ color:var(--distressed); }
   .breaking{ color:var(--breaking); }
 
-  /* ---- overlay + book panel (input: writing a new page) ---- */
+  /* ---- overlay + book panel ---- */
   .overlay{
     position:fixed; inset:0;
     background:rgba(4,3,5,0.72);
@@ -567,7 +561,7 @@
   }
   .day-view-backdrop.open{ opacity:1; pointer-events:auto; }
 
-  /* ---- day's events (top right) ---- */
+  /* ---- day's events ---- */
   .drawer-overlay{
     position:fixed; inset:0;
     background:transparent;
