@@ -17,13 +17,13 @@
   const auth = getAuth(app);
   const calendarRef = doc(db, "calendar", "main");
 
-  window.__ghostDB = {
+  window.__calendarDB = {
     subscribe(onData){
       return onSnapshot(calendarRef, (snap)=>{
         const data = snap.exists() ? snap.data() : {};
         onData(data.entries || {});
       }, (err)=>{
-        console.error('Ledger read failed', err);
+        console.error('Calendar read failed', err);
         onData({});
       });
     },
@@ -38,14 +38,14 @@
         if(err.code === 'permission-denied'){
           alert('You are not authorized to save changes.');
         }else{
-          alert('Could not save to the ledger. Check your connection and try again.');
+          alert('Could not save the calendar. Check your connection and try again.');
         }
         throw err;
       }
     }
   };
 
-  window.__ghostAuth = {
+  window.__calendarAuth = {
     onChange(cb){ return onAuthStateChanged(auth, cb); },
     async signIn(email, password){ await signInWithEmailAndPassword(auth, email, password); },
     async signOut(){ await signOut(auth); }

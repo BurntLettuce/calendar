@@ -22,8 +22,13 @@
   </div>
 </div>
 
+<!-- Import-schedule widget -->
+<div class="import-widget" id="importWidget">
+  <button class="today-btn" id="importBtn" type="button">Import schedule</button>
+</div>
+
 <div class="stage">
-  <div class="ledger-head">
+  <div class="calendar-banner">
     <img class="floral-banner" src="images/vines-banner.svg" alt="" aria-hidden="true">
   </div>
 
@@ -81,12 +86,12 @@
 
 <!-- Menu appears in the upper-right area of the screen to display events -->
 <div class="drawer-overlay" id="drawerOverlay">
-  <div class="ledger-drawer" id="ledgerDrawer" role="dialog" aria-label="Day's events">
-    <div class="book-head">
+  <div class="events-drawer" id="eventsDrawer" role="dialog" aria-label="Day's events">
+    <div class="panel-head">
       <div>
         <div class="weekday-label" id="panelWeekday"></div>
         <h3 id="panelDate"></h3>
-        <div class="chapter-tag" id="chapterTag"></div>
+        <div class="mood-tag" id="moodTag"></div>
       </div>
       <button class="icon-btn" id="closeDrawerBtn" aria-label="Close">&#10005;</button>
     </div>
@@ -97,15 +102,15 @@
   </div>
 </div>
 
-<!-- Opens separately to write a new event, or edit an existing one -->
-<div class="overlay" id="bookOverlay">
-  <div class="book" id="book">
-    <div class="book-head">
+<!-- Open to write a new event, or edit an existing one -->
+<div class="overlay" id="eventOverlay">
+  <div class="event-modal" id="eventModal">
+    <div class="panel-head">
       <div>
-        <div class="weekday-label" id="bookModeLabel">New event</div>
-        <h3 id="bookDateLabel"></h3>
+        <div class="weekday-label" id="eventModeLabel">New event</div>
+        <h3 id="eventDateLabel"></h3>
       </div>
-      <button class="icon-btn" id="closeBookBtn" aria-label="Close">&#10005;</button>
+      <button class="icon-btn" id="closeEventBtn" aria-label="Close">&#10005;</button>
     </div>
 
     <form class="add-entry" id="addForm">
@@ -127,6 +132,41 @@
       </div>
       <button type="submit" class="add-btn" id="addSubmitBtn">Schedule</button>
     </form>
+  </div>
+</div>
+
+<!-- Reads a schedule screenshot -->
+<div class="overlay" id="importOverlay">
+  <div class="event-modal" id="importModal">
+    <div class="panel-head">
+      <div>
+        <div class="weekday-label">Photo import</div>
+        <h3>Import schedule</h3>
+      </div>
+      <button class="icon-btn" id="closeImportBtn" aria-label="Close">&#10005;</button>
+    </div>
+
+    <div class="import-scroll">
+      <!-- Step 1: upload -->
+      <div class="import-step" id="importUploadStep">
+        <p class="import-hint" id="uploadStepHint">Reads times, double-check the dates.</p>
+        <label class="paste-zone" id="pasteZone" for="scheduleFileInput">
+          <span class="paste-zone-text">Click to choose a file, drag a screenshot here, or press Ctrl+V to paste</span>
+        </label>
+        <input type="file" class="visually-hidden" id="scheduleFileInput" accept="image/*">
+        <button type="button" class="add-btn" id="readScheduleBtn" disabled>Read schedule</button>
+        <p class="import-error" id="importError"></p>
+      </div>
+
+      <!-- Step 2: review -->
+      <div class="import-step" id="importReviewStep" hidden>
+        <p class="import-hint" id="reviewStepHint">Review, fix anything wrong, then add it in.</p>
+        <div class="shift-rows" id="shiftRows"></div>
+        <p class="import-error" id="importReviewError"></p>
+        <button type="button" class="add-btn" id="addShiftsBtn">Add to schedule</button>
+        <button type="button" class="import-link-btn" id="importAnotherBtn">Import another screenshot</button>
+      </div>
+    </div>
   </div>
 </div>
 

@@ -21,8 +21,7 @@
   const pageInput = document.getElementById('pageInput');
   const pageGoBtn = document.getElementById('pageGoBtn');
   const drawerOverlay = document.getElementById('drawerOverlay');
-  const ledgerDrawer = document.getElementById('ledgerDrawer');
-  const bookOverlay = document.getElementById('bookOverlay');
+  const eventOverlay = document.getElementById('eventOverlay');
   const dayViewBackdrop = document.getElementById('dayViewBackdrop');
   const timelineOverlay = document.getElementById('timelineOverlay');
   const timelineWeekday = document.getElementById('timelineWeekday');
@@ -33,8 +32,8 @@
   const entriesList = document.getElementById('entriesList');
   const panelDate = document.getElementById('panelDate');
   const panelWeekday = document.getElementById('panelWeekday');
-  const chapterTag = document.getElementById('chapterTag');
-  const bookDateLabel = document.getElementById('bookDateLabel');
+  const moodTag = document.getElementById('moodTag');
+  const eventDateLabel = document.getElementById('eventDateLabel');
   const openAddBtn = document.getElementById('openAddBtn');
   const addForm = document.getElementById('addForm');
   const titleInput = document.getElementById('titleInput');
@@ -47,9 +46,27 @@
   const authPassword = document.getElementById('authPassword');
   const authSubmitBtn = document.getElementById('authSubmitBtn');
   const authError = document.getElementById('authError');
-  const bookModeLabel = document.getElementById('bookModeLabel');
+  const eventModeLabel = document.getElementById('eventModeLabel');
   const addSubmitBtn = document.getElementById('addSubmitBtn');
+  const importBtn = document.getElementById('importBtn');
+  const importOverlay = document.getElementById('importOverlay');
+  const closeImportBtn = document.getElementById('closeImportBtn');
+  const importUploadStep = document.getElementById('importUploadStep');
+  const importReviewStep = document.getElementById('importReviewStep');
+  const scheduleFileInput = document.getElementById('scheduleFileInput');
+  const pasteZone = document.getElementById('pasteZone');
+  const readScheduleBtn = document.getElementById('readScheduleBtn');
+  const reviewStepHint = document.getElementById('reviewStepHint');
+  const importError = document.getElementById('importError');
+  const shiftRows = document.getElementById('shiftRows');
+  const importReviewError = document.getElementById('importReviewError');
+  const addShiftsBtn = document.getElementById('addShiftsBtn');
+  const importAnotherBtn = document.getElementById('importAnotherBtn');
+  const TESSERACT_SRC = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+  const defaultPasteZoneText = 'Click to choose a file, drag a screenshot here, or press Ctrl+V to paste';
+  let extractedShifts = [];
   let currentUser = null;
+  let tesseractLoadPromise = null;
 
   function dateKey(y,m,d){ return y+'-'+(m+1)+'-'+d; }
   function todayKey(){ const t=new Date(); return dateKey(t.getFullYear(), t.getMonth(), t.getDate()); }
@@ -161,7 +178,7 @@
   }
 
   function loadEntries(){
-    window.__ghostDB.subscribe((liveEntries)=>{
+    window.__calendarDB.subscribe((liveEntries)=>{
       entries = liveEntries;
       storageReady = true;
       render();
@@ -171,8 +188,185 @@
 
   async function saveEntries(){
     try{
-      await window.__ghostDB.save(entries);
+      await window.__calendarDB.save(entries);
     }catch(e){}
+  }
+
+  // ---- Schedule photo import (free, on-device OCR — no key, no account) ----
+
+  function openImportModal(){
+    importError.textContent = '';
+    importReviewError.textContent = '';
+    showImportStep('upload');
+    importOverlay.classList.add('open');
+  }
+
+  function closeImportModal(){
+    importOverlay.classList.remove('open');
+    scheduleFileInput.value = '';
+    pasteZone.classList.remove('has-image');
+    pasteZone.querySelector('.paste-zone-text').textContent = defaultPasteZoneText;
+    readScheduleBtn.disabled = true;
+    readScheduleBtn.textContent = 'Read schedule';
+    importError.textContent = '';
+  }
+
+  function showImportStep(step){
+    importUploadStep.hidden = step !== 'upload';
+    importReviewStep.hidden = step !== 'review';
+  }
+
+  function setPastedPreview(file){
+    pasteZone.classList.add('has-image');
+    pasteZone.querySelector('.paste-zone-text').textContent = file.name || 'Image ready';
+    readScheduleBtn.disabled = false;
+    importError.textContent = '';
+  }
+
+  function loadTesseract(){
+    if(window.Tesseract) return Promise.resolve(window.Tesseract);
+    if(tesseractLoadPromise) return tesseractLoadPromise;
+    tesseractLoadPromise = new Promise((resolve, reject)=>{
+      const script = document.createElement('script');
+      script.src = TESSERACT_SRC;
+      script.onload = () => resolve(window.Tesseract);
+      script.onerror = () => { tesseractLoadPromise = null; reject(new Error('Could not load the free OCR library. Check your connection.')); };
+      document.head.appendChild(script);
+    });
+    return tesseractLoadPromise;
+  }
+
+  function to24Hour(raw){
+    if(!raw) return '';
+    const m = raw.trim().toLowerCase().match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/);
+    if(!m) return '';
+    let h = parseInt(m[1],10);
+    const min = m[2] || '00';
+    const period = m[3];
+    if(period === 'pm' && h < 12) h += 12;
+    if(period === 'am' && h === 12) h = 0;
+    if(h > 23) return '';
+    return String(h).padStart(2,'0') + ':' + min;
+  }
+
+  function parseShiftsFromOcrText(text){
+    const timeRangeRe = /(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\s*(?:-|–|—|to)\s*(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/gi;
+    const shifts = [];
+    let match;
+    while((match = timeRangeRe.exec(text)) !== null){
+      const start = to24Hour(match[1]);
+      const end = to24Hour(match[2]);
+      if(!start && !end) continue;
+      shifts.push({
+        id: makeShiftId(),
+        included: true,
+        dateKey: todayKey(),
+        title: 'Shift',
+        startTime: start,
+        endTime: end,
+        note: ''
+      });
+    }
+    return shifts;
+  }
+
+  async function readScheduleWithFreeOCR(){
+    const file = scheduleFileInput.files[0];
+    if(!file) return;
+
+    importError.textContent = '';
+    readScheduleBtn.disabled = true;
+    readScheduleBtn.textContent = 'Reading…';
+
+    try{
+      const Tesseract = await loadTesseract();
+      const { data } = await Tesseract.recognize(file, 'eng');
+      const shifts = parseShiftsFromOcrText(data.text || '');
+
+      if(shifts.length === 0){
+        importError.textContent = "Didn't find any shift times in that image. Try a clearer, less cluttered screenshot.";
+        return;
+      }
+
+      extractedShifts = shifts;
+      renderShiftRows();
+      showImportStep('review');
+    }catch(err){
+      importError.textContent = err.message || 'Something went wrong reading that image.';
+    }finally{
+      readScheduleBtn.disabled = false;
+      readScheduleBtn.textContent = 'Read schedule';
+    }
+  }
+
+  function makeShiftId(){
+    return 'shift-' + Date.now() + '-' + Math.random().toString(36).slice(2,7);
+  }
+
+  function shiftToDateInputValue(shift){
+    // dateKey is "Y-M-D" (1-indexed month, no leading zeros); <input type=date> needs "YYYY-MM-DD"
+    const [y,m,d] = shift.dateKey.split('-').map(Number);
+    return y + '-' + String(m).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+  }
+
+  function dateInputValueToKey(value){
+    const [y,m,d] = value.split('-').map(Number);
+    return dateKey(y, m-1, d);
+  }
+
+  function renderShiftRows(){
+    shiftRows.innerHTML = '';
+    extractedShifts.forEach((shift)=>{
+      const row = document.createElement('div');
+      row.className = 'shift-row';
+      row.innerHTML = `
+        <div class="shift-row-top">
+          <input type="checkbox" class="shift-include" ${shift.included ? 'checked' : ''}>
+          <input type="text" class="shift-title import-field" value="${shift.title.replace(/"/g,'&quot;')}" placeholder="Title" maxlength="60">
+        </div>
+        <div class="shift-row-grid">
+          <input type="date" class="shift-date import-field" value="${shiftToDateInputValue(shift)}">
+          <input type="time" class="shift-start import-field" value="${shift.startTime}">
+          <input type="time" class="shift-end import-field" value="${shift.endTime}">
+        </div>
+        <textarea class="shift-note import-field" placeholder="Notes (optional)" maxlength="200">${shift.note || ''}</textarea>
+        <button type="button" class="shift-remove">Remove</button>
+      `;
+      row.querySelector('.shift-include').addEventListener('change', (e)=>{ shift.included = e.target.checked; });
+      row.querySelector('.shift-title').addEventListener('input', (e)=>{ shift.title = e.target.value; });
+      row.querySelector('.shift-date').addEventListener('input', (e)=>{ shift.dateKey = dateInputValueToKey(e.target.value); });
+      row.querySelector('.shift-start').addEventListener('input', (e)=>{ shift.startTime = e.target.value; });
+      row.querySelector('.shift-end').addEventListener('input', (e)=>{ shift.endTime = e.target.value; });
+      row.querySelector('.shift-note').addEventListener('input', (e)=>{ shift.note = e.target.value; });
+      row.querySelector('.shift-remove').addEventListener('click', ()=>{
+        extractedShifts = extractedShifts.filter(s=>s.id!==shift.id);
+        renderShiftRows();
+      });
+      shiftRows.appendChild(row);
+    });
+  }
+
+  function addExtractedShiftsToSchedule(){
+    const toAdd = extractedShifts.filter(s => s.included);
+    if(toAdd.length === 0){
+      importReviewError.textContent = 'Nothing is checked to add.';
+      return;
+    }
+    toAdd.forEach(shift => {
+      if(!entries[shift.dateKey]) entries[shift.dateKey] = [];
+      entries[shift.dateKey].push({
+        id: Date.now()+'-'+Math.random().toString(36).slice(2,7),
+        title: shift.title || 'Shift',
+        startTime: shift.startTime || '',
+        endTime: shift.endTime || '',
+        note: shift.note || ''
+      });
+    });
+    saveEntries();
+    render();
+    if(selectedDateKey){ renderEntries(); renderTimeline(); }
+    extractedShifts = [];
+    closeImportModal();
   }
 
   function spawnWisps(){
@@ -356,7 +550,7 @@
     const dateText = MONTHS[m] + ' ' + d + ', ' + y;
     panelWeekday.textContent = weekday;
     panelDate.textContent = dateText;
-    bookDateLabel.textContent = weekday + ', ' + dateText;
+    eventDateLabel.textContent = weekday + ', ' + dateText;
     timelineWeekday.textContent = weekday;
     timelineDate.textContent = dateText;
 
@@ -369,7 +563,7 @@
   }
 
   function anyDayViewOpen(){
-    return bookOverlay.classList.contains('open') || drawerOverlay.classList.contains('open') || timelineOverlay.classList.contains('open');
+    return eventOverlay.classList.contains('open') || drawerOverlay.classList.contains('open') || timelineOverlay.classList.contains('open');
   }
 
   // the shared backdrop stays up as long as the drawer or timeline is open,
@@ -401,9 +595,9 @@
   function openAddForm(){
     editingId = null;
     titleInput.value=''; startTimeInput.value=''; endTimeInput.value=''; noteInput.value='';
-    bookModeLabel.textContent = 'New event';
+    eventModeLabel.textContent = 'New event';
     addSubmitBtn.textContent = 'Schedule';
-    bookOverlay.classList.add('open');
+    eventOverlay.classList.add('open');
     setTimeout(()=>titleInput.focus(), 300);
   }
 
@@ -413,14 +607,14 @@
     startTimeInput.value = entry.startTime || '';
     endTimeInput.value = entry.endTime || '';
     noteInput.value = entry.note || '';
-    bookModeLabel.textContent = 'Edit event';
+    eventModeLabel.textContent = 'Edit event';
     addSubmitBtn.textContent = 'Save changes';
-    bookOverlay.classList.add('open');
+    eventOverlay.classList.add('open');
     setTimeout(()=>titleInput.focus(), 300);
   }
 
   function closeAddForm(){
-    bookOverlay.classList.remove('open');
+    eventOverlay.classList.remove('open');
     editingId = null;
     if(!anyDayViewOpen()) selectedDateKey = null;
   }
@@ -520,7 +714,7 @@
     const hm = hmRaw - 1;
     const holidayInfo = getHolidayInfo(hy, hm, hd);
 
-    chapterTag.innerHTML = mood
+    moodTag.innerHTML = mood
       ? '<span class="mood-dot '+mood+'"></span>' + list.length + (list.length===1 ? ' event bound · emotion ' : ' events bound · emotion ') + MOOD_LABEL[mood]
       : 'No events bound yet';
 
@@ -645,15 +839,74 @@
 
   openAddBtn.addEventListener('click', openAddForm);
   document.getElementById('closeDrawerBtn').addEventListener('click', closeDrawer);
-  document.getElementById('closeBookBtn').addEventListener('click', closeAddForm);
+  document.getElementById('closeEventBtn').addEventListener('click', closeAddForm);
   document.getElementById('closeTimelineBtn').addEventListener('click', closeTimeline);
 
   dayViewBackdrop.addEventListener('click', closeAllDayViews);
-  bookOverlay.addEventListener('click', (e)=>{ if(e.target===bookOverlay) closeAddForm(); });
+  eventOverlay.addEventListener('click', (e)=>{ if(e.target===eventOverlay) closeAddForm(); });
   document.addEventListener('keydown', (e)=>{
     if(e.key!=='Escape') return;
-    if(bookOverlay.classList.contains('open')) closeAddForm();
+    if(eventOverlay.classList.contains('open')) closeAddForm();
     else if(timelineOverlay.classList.contains('open') || drawerOverlay.classList.contains('open')) closeAllDayViews();
+  });
+
+  // ---- Schedule photo import wiring ----
+  importBtn.addEventListener('click', openImportModal);
+  closeImportBtn.addEventListener('click', closeImportModal);
+  importOverlay.addEventListener('click', (e)=>{ if(e.target===importOverlay) closeImportModal(); });
+  document.addEventListener('keydown', (e)=>{
+    if(e.key==='Escape' && importOverlay.classList.contains('open')) closeImportModal();
+  });
+
+  scheduleFileInput.addEventListener('change', ()=>{
+    if(scheduleFileInput.files.length) setPastedPreview(scheduleFileInput.files[0]);
+  });
+
+  pasteZone.addEventListener('dragover', (e)=>{ e.preventDefault(); pasteZone.classList.add('drag-over'); });
+  pasteZone.addEventListener('dragleave', ()=>{ pasteZone.classList.remove('drag-over'); });
+  pasteZone.addEventListener('drop', (e)=>{
+    e.preventDefault();
+    pasteZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if(file && file.type.startsWith('image/')){
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      scheduleFileInput.files = dt.files;
+      setPastedPreview(file);
+    }
+  });
+
+  readScheduleBtn.addEventListener('click', readScheduleWithFreeOCR);
+  addShiftsBtn.addEventListener('click', addExtractedShiftsToSchedule);
+
+  importAnotherBtn.addEventListener('click', ()=>{
+    extractedShifts = [];
+    scheduleFileInput.value = '';
+    pasteZone.classList.remove('has-image');
+    pasteZone.querySelector('.paste-zone-text').textContent = defaultPasteZoneText;
+    readScheduleBtn.disabled = true;
+    importReviewError.textContent = '';
+    showImportStep('upload');
+  });
+
+  // Paste a screenshot directly (Ctrl+V / Cmd+V) while the upload step is open
+  document.addEventListener('paste', (e)=>{
+    if(!importOverlay.classList.contains('open') || importUploadStep.hidden) return;
+    const items = e.clipboardData && e.clipboardData.items;
+    if(!items) return;
+    for(const item of items){
+      if(item.type && item.type.startsWith('image/')){
+        const file = item.getAsFile();
+        if(file){
+          const dt = new DataTransfer();
+          dt.items.add(file);
+          scheduleFileInput.files = dt.files;
+          setPastedPreview(file);
+          e.preventDefault();
+        }
+        break;
+      }
+    }
   });
 
   document.getElementById('prevBtn').addEventListener('click', ()=>{
@@ -711,7 +964,7 @@
   authBtn.addEventListener('click', (e)=>{
     e.stopPropagation();
     if(currentUser){
-      window.__ghostAuth.signOut();
+      window.__calendarAuth.signOut();
     }else{
       authPanel.classList.toggle('open');
       if(authPanel.classList.contains('open')) authEmail.focus();
@@ -724,7 +977,7 @@
     const password = authPassword.value;
     if(!email || !password) return;
     try{
-      await window.__ghostAuth.signIn(email, password);
+      await window.__calendarAuth.signIn(email, password);
       authEmail.value=''; authPassword.value='';
       closeAuthPanel();
     }catch(err){
@@ -742,7 +995,7 @@
   });
   document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && authPanel.classList.contains('open')) closeAuthPanel(); });
 
-  window.__ghostAuth.onChange((user)=>{
+  window.__calendarAuth.onChange((user)=>{
     currentUser = user;
     authBtn.textContent = user ? 'Sign out' : 'Sign in';
     if(user) closeAuthPanel();
